@@ -19,13 +19,13 @@ DNS- Blockchain Way (my project)
 - removes inconsistencies
 
 # Project Steps
-Store info & transactions in the Blocks
-DNS entry and Database
-Proof Of Work
-Add Blocks to the Chain
-Create the Interface
-Est. decentralization and consensus
-Build the application
-Run it! Demo time.
+1. Store info & transactions in the Blocks
+2. DNS entry and Database
+3. Proof Of Work
+4. Add Blocks to the Chain
+5. Create the Interface
+6. Est. decentralization and consensus
+7. Build the application
+8. Run it! Demo time.
 
 
