@@ -5,6 +5,56 @@ import time
 from flask import Flask, request
 import requests
 
+#hw: run some tests!!!
+
+
+class Dns_Entry:
+
+    def __init__(self, ip, timestamp, owner):
+        self.ip = ip
+        self.last_modification = timestamp
+        self.owner = owner
+
+    def update(self, ip, timestamp, owner):
+        if ip is None and owner is None or timestamp is None:
+            return False
+        if owner is not None:
+            self.owner = owner
+        if ip is not None:
+            self.ip = ip
+        self.timestamp = timestamp
+        return True
+
+class DNS_Db:
+
+
+    def __init__(self):
+        self.db = {}
+
+    def process_data(self, ip, owner, new_owner, timestamp, domain):
+        if ip is None and new_owner is None or timestamp is None or domain is None:
+            return False
+        dns_entry = self.db.get(domain)
+        if dns_entry is not None:
+            if dns_entry.owner != owner:
+                return False
+            else:
+
+                return dns_entry.update(ip, timestamp, new_owner)
+
+        else:
+            self.db[domain] = Dns_Entry(ip, timestamp, new_owner)
+            return True
+
+    def process_transaction(self, transaction):
+        ip_address= transaction.get("ip_address")
+        owner = transaction.get("owner")
+        new_owner= transaction.get("new_owner")
+        timestamp= transaction.get("timestamp")
+        domain= transaction.get("domain")
+
+        return self.process_data(ip_address, owner, new_owner, timestamp, domain)
+
 
 class Block:
     def __init__(self, index, transactions, timestamp, previous_hash, nonce=0):
@@ -19,8 +69,8 @@ class Block:
         A function that return the hash of the block contents.
         """
         block_string = json.dumps(self.__dict__, sort_keys=True)
-        return sha256(block_string.encode()).hexdigest()
-
+        hash = sha256(block_string.encode()).hexdigest()
+        return hash
 
 class Blockchain:
     # difficulty of our PoW algorithm
@@ -29,6 +79,8 @@ class Blockchain:
     def __init__(self):
         self.unconfirmed_transactions = []
         self.chain = []
+        self.create_genesis_block()
+        self.dns_db = DNS_Db()
 
     def create_genesis_block(self):
         """
@@ -39,6 +91,15 @@ class Blockchain:
         genesis_block = Block(0, [], 0, "0")
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
+
+    def reconstruct_dns_db(self, longest_chain):
+        self.dns_db = DNS_Db()
+        for block in longest_chain:
+            for transaction in block.transactions:
+                self.dns_db.process_transaction(transaction)
+
+
+
 
     @property
     def last_block(self):
@@ -76,7 +137,7 @@ class Blockchain:
         while not computed_hash.startswith('0' * Blockchain.difficulty):
             block.nonce += 1
             computed_hash = block.compute_hash()
-
+        print("The computed hash is ", computed_hash)
         return computed_hash
 
     def add_new_transaction(self, transaction):
@@ -121,9 +182,11 @@ class Blockchain:
             return False
 
         last_block = self.last_block
+        all_transactions = self.unconfirmed_transactions
+        verified_transactions = self.get_verified_transaction(all_transactions)
 
         new_block = Block(index=last_block.index + 1,
-                          transactions=self.unconfirmed_transactions,
+                          transactions=verified_transactions,
                           timestamp=time.time(),
                           previous_hash=last_block.hash)
 
@@ -133,6 +196,25 @@ class Blockchain:
         self.unconfirmed_transactions = []
 
         return True
+        # return new_block.index
+
+
+
+    def get_verified_transaction(self, transactions):
+        verified_transactions = []
+        for transaction in transactions:
+            if self.verify_transaction(transaction):
+                verified_transactions.append(transaction)
+            else:
+                print("Transaction is unverified")
+        print("So far, the verified transactions are: ", verified_transactions)
+        print("The DNS db is ", self.dns_db.db)
+        return verified_transactions
+
+    def verify_transaction(self, transaction):
+        # ip, owner, new_owner, timestamp, domain
+        return self.dns_db.process_transaction(transaction)
+
 
 
 app = Flask(__name__)
@@ -140,6 +222,7 @@ app = Flask(__name__)
 # the node's copy of blockchain
 blockchain = Blockchain()
 blockchain.create_genesis_block()
+
 
 # the address to other participating members of the network
 peers = set()
@@ -150,17 +233,30 @@ peers = set()
 @app.route('/new_transaction', methods=['POST'])
 def new_transaction():
     tx_data = request.get_json()
-    required_fields = ["author", "content"]
+    required_fields = ["domain", "owner"]
 
     for field in required_fields:
         if not tx_data.get(field):
             return "Invalid transaction data", 404
 
     tx_data["timestamp"] = time.time()
-
+    print("tx data is ", tx_data)
     blockchain.add_new_transaction(tx_data)
 
     return "Success", 201
+
+#1. extract tx data info
+#2. missing id (public key) of peer
+# Every new transaction submitted (post submitted)
+# is signed with the user’s private key.
+# This signature is added to the transaction data
+# along with the user information.
+# During the verification phase,
+# while mining the transactions, we can verify
+# if the claimed owner of the post is the same as the one specified
+# in the transaction data, and also that the message has not been modified.
+# This can be done using the signature and the
+# public key of the claimed owner of the post.
 
 
 # endpoint to return the node's copy of the chain.
@@ -181,6 +277,7 @@ def get_chain():
 # a command to mine from our application itself.
 @app.route('/mine', methods=['GET'])
 def mine_unconfirmed_transactions():
+    print("inside /mine , yay!")
     result = blockchain.mine()
     if not result:
         return "No transactions to mine"
@@ -304,6 +401,7 @@ def consensus():
             longest_chain = chain
 
     if longest_chain:
+        blockchain.dns_db
         blockchain = longest_chain
         return True
 

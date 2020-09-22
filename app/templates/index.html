@@ -6,9 +6,13 @@
 
 	<center>
 	<form action="/submit" id="textform" method="post">
-	    <textarea name="content" rows="4" cols="50" placeholder="Just write whatever you want to..."></textarea>
+<!--	    <textarea name="content" rows="4" cols="50" placeholder="Just write whatever you want to..."></textarea>-->
 	    <br>
-	    <input type="text" name="author" placeholder="Your name">
+	    <input type="text" name="domain" placeholder="Your domain">
+		<input type="text" name="ip_address" placeholder="Your ip address">
+		<input type="text" name="new_owner" placeholder="The new owner">
+		<input type="text" name="owner" placeholder="The previous owner">
+
 	    <input type="submit" value="Post">
 	</form>
 	</center>
@@ -24,13 +28,16 @@
     <div class="post_box">
 	   <div class="post_box-header">
 	      <div class="post_box-options"><button class="option-btn">Reply</button></div>
-	      <div style="background: rgb(0, 97, 146) none repeat scroll 0% 0%; box-shadow: rgb(0, 97, 146) 0px 0px 0px 2px;" class="post_box-avatar">{{post.author[0]}}</div>
-	      <div class="name-header">{{post.author}}</div>
+	      <div style="background: rgb(0, 97, 146) none repeat scroll 0% 0%; box-shadow: rgb(0, 97, 146) 0px 0px 0px 2px;" class="post_box-avatar">{{post.domain[0]}}</div>
+	      <div class="name-header">{{post.domain}}</div>
 	      <div class="post_box-subtitle"> Posted at <i>{{readable_time(post.timestamp)}}</i></div>
 	   </div>
 	   <div>
 	      <div class="post_box-body">
-	         <p>{{post.content}}</p>
+	         <p>The ip address is {{post.ip_address}}</p>
+			  <p>The new owner is {{post.new_owner}}</p>
+			  <p>The previous owner was {{post.owner}}</p>
+			  <p>Congrats on your transaction!</p>
 	      </div>
 	   </div>
 	</div>
